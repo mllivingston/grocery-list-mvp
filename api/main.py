@@ -1,5 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from supabase import Client
 from uuid import UUID
 from typing import List, Dict
@@ -15,15 +17,16 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Serve static files
+@app.get("/")
+async def serve_frontend():
+    """Serve the frontend HTML"""
+    return FileResponse("static/index.html")
+
 # CORS middleware for frontend running on different port
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:8000",  # Keep for backwards compatibility
-        "http://127.0.0.1:8000",
-    ],
+    allow_origins=["*"],  # Simplified - or specify your Railway domain
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
