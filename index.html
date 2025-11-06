@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grocery List</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 { margin-bottom: 20px; font-size: 24px; }
+        input[type="text"], input[type="email"], input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #007AFF;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        
+        /* Login screen */
+        #login-screen {
+            background: white;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+        }
+        #login-screen h1 { margin-bottom: 30px; }
+        #login-screen input { margin-bottom: 15px; }
+        .login-message {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .login-message.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .login-message.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .auth-toggle {
+            margin-top: 15px;
+            color: #666;
+            font-size: 14px;
+        }
+        .auth-toggle a {
+            color: #007AFF;
+            text-decoration: none;
+        }
+        .auth-toggle a:hover {
+            text-decoration: underline;
+        }
+        
+        /* App screen */
+        #app-screen { display: none; }
+        .add-item { display: flex; gap: 10px; margin: 20px 0; }
+        .add-item input { flex: 1; margin: 0; }
+        .add-item button { width: auto; padding: 12px 24px; }
+        #items-list { background: white; border-radius: 8px; padding: 20px; }
+        .item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .item:hover { background: #f9f9f9; }
+        .item:last-child { border-bottom: none; }
+        .item.bought { opacity: 0.5; }
+        .item.bought .item-name { text-decoration: line-through; }
+        .checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #ddd;
+            border-radius: 50%;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+        .item.bought .checkbox {
+            background: #007AFF;
+            border-color: #007AFF;
+            position: relative;
+        }
+        .item.bought .checkbox::after {
+            content: "✓";
+            color: white;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 14px;
+        }
+        .item-name { flex: 1; font-size: 16px; }
+        .empty-state { text-align: center; color: #999; padding: 40px 0; }
+        .logout-btn {
+            margin-top: 20px;
+            background: #6c757d;
+        }
+        .logout-btn:hover { background: #5a6268; }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="login-screen">
+        <h1>🛒 Grocery List</h1>
+        
+        <!-- Login Form (default) -->
+        <div id="login-form">
+            <input type="email" id="login-email" placeholder="Email" autocomplete="email" />
+            <input type="password" id="login-password" placeholder="Password" autocomplete="current-password" />
+            <button id="login-btn" onclick="handleLogin()">Log In</button>
+            <div id="login-message"></div>
+            <div class="auth-toggle">
+                Don't have an account? <a href="#" onclick="showSignup(); return false;">Sign up</a>
+            </div>
+        </div>
+        
+        <!-- Signup Form (hidden by default) -->
+        <div id="signup-form" style="display: none;">
+            <input type="email" id="signup-email" placeholder="Email" autocomplete="email" />
+            <input type="password" id="signup-password" placeholder="Password (min 6 characters)" autocomplete="new-password" />
+            <input type="password" id="signup-password-confirm" placeholder="Confirm Password" autocomplete="new-password" />
+            <button id="signup-btn" onclick="handleSignup()">Sign Up</button>
+            <div id="signup-message"></div>
+            <div class="auth-toggle">
+                Already have an account? <a href="#" onclick="showLogin(); return false;">Log in</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- App Screen -->
+    <div id="app-screen">
+        <h1>🛒 My Grocery List</h1>
+        <div class="add-item">
+            <input type="text" id="new-item" placeholder="Add item..." onkeypress="handleEnter(event)">
+            <button onclick="addItem()">Add</button>
+        </div>
+        <div id="items-list"></div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const API_URL = 'http://127.0.0.1:8000';
+        const SUPABASE_URL = 'https://anycptncmkqaoftxtzcf.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFueWNwdG5jbWtxYW9mdHh0emNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxOTk1MDksImV4cCI6MjA3Nzc3NTUwOX0.DkOXBGnE7rb9KyhX_A7-v86IRT1P-bFxOAiEIc3No2U';
+        
+        const { createClient } = supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: {
+                autoRefreshToken: true,
+                persistSession: true,
+            }
+        });
+        let currentSession = null;
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        async function init() {
+            console.log('=== INIT STARTED ===');
+            
+            // Check for existing session
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            
+            if (session) {
+                console.log('Found existing session for:', session.user.email);
+                currentSession = session;
+                showApp();
+                loadItems();
+            } else {
+                console.log('No existing session');
+                showLogin();
+            }
+            
+            // Listen for auth changes
+            supabaseClient.auth.onAuthStateChange((event, session) => {
+                console.log('Auth state changed:', event);
+                
+                if (event === 'SIGNED_IN' && session) {
+                    console.log('User signed in:', session.user.email);
+                    currentSession = session;
+                    showApp();
+                    loadItems();
+                } else if (event === 'SIGNED_OUT') {
+                    console.log('User signed out');
+                    currentSession = null;
+                    showLogin();
+                }
+            });
+            
+            console.log('=== INIT COMPLETE ===');
+        }
+
+        // ============================================
+        // UI TOGGLE FUNCTIONS
+        // ============================================
+        function showLogin() {
+            document.getElementById('login-screen').style.display = 'block';
+            document.getElementById('app-screen').style.display = 'none';
+            document.getElementById('login-form').style.display = 'block';
+            document.getElementById('signup-form').style.display = 'none';
+        }
+
+        function showSignup() {
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('signup-form').style.display = 'block';
+            clearMessages();
+        }
+
+        function showApp() {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('app-screen').style.display = 'block';
+        }
+
+        function clearMessages() {
+            document.getElementById('login-message').textContent = '';
+            document.getElementById('login-message').className = 'login-message';
+            document.getElementById('signup-message').textContent = '';
+            document.getElementById('signup-message').className = 'login-message';
+        }
+
+        // ============================================
+        // AUTH FUNCTIONS - PASSWORD BASED
+        // ============================================
+        async function handleLogin() {
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            const messageEl = document.getElementById('login-message');
+            const btnEl = document.getElementById('login-btn');
+            
+            messageEl.textContent = '';
+            messageEl.className = 'login-message';
+            
+            if (!email || !password) {
+                showMessage('login', 'Please enter email and password', 'error');
+                return;
+            }
+
+            btnEl.disabled = true;
+            btnEl.textContent = 'Logging in...';
+            
+            try {
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+                
+                if (error) throw error;
+                
+                console.log('Login successful');
+                // Auth state change will handle UI update
+                
+            } catch (error) {
+                console.error('Login error:', error);
+                showMessage('login', error.message || 'Login failed', 'error');
+            } finally {
+                btnEl.disabled = false;
+                btnEl.textContent = 'Log In';
+            }
+        }
+
+        async function handleSignup() {
+            const email = document.getElementById('signup-email').value.trim();
+            const password = document.getElementById('signup-password').value;
+            const passwordConfirm = document.getElementById('signup-password-confirm').value;
+            const messageEl = document.getElementById('signup-message');
+            const btnEl = document.getElementById('signup-btn');
+            
+            messageEl.textContent = '';
+            messageEl.className = 'login-message';
+            
+            if (!email || !password || !passwordConfirm) {
+                showMessage('signup', 'Please fill in all fields', 'error');
+                return;
+            }
+
+            if (password !== passwordConfirm) {
+                showMessage('signup', 'Passwords do not match', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                showMessage('signup', 'Password must be at least 6 characters', 'error');
+                return;
+            }
+
+            btnEl.disabled = true;
+            btnEl.textContent = 'Signing up...';
+            
+            try {
+                const { data, error } = await supabaseClient.auth.signUp({
+                    email: email,
+                    password: password
+                });
+                
+                if (error) throw error;
+                
+                console.log('Signup successful:', data);
+                
+                // Check if email confirmation is required
+                if (data.user && !data.session) {
+                    showMessage('signup', 'Account created! Please check your email to confirm.', 'success');
+                } else {
+                    showMessage('signup', 'Account created! Logging you in...', 'success');
+                    // Auth state change will handle UI update
+                }
+                
+            } catch (error) {
+                console.error('Signup error:', error);
+                showMessage('signup', error.message || 'Signup failed', 'error');
+            } finally {
+                btnEl.disabled = false;
+                btnEl.textContent = 'Sign Up';
+            }
+        }
+
+        function showMessage(formType, text, type) {
+            const messageEl = document.getElementById(`${formType}-message`);
+            messageEl.textContent = text;
+            messageEl.className = `login-message ${type}`;
+        }
+
+        async function logout() {
+            await supabaseClient.auth.signOut();
+            currentSession = null;
+            showLogin();
+        }
+
+        // ============================================
+        // GROCERY ITEM FUNCTIONS (unchanged)
+        // ============================================
+        async function loadItems() {
+            if (!currentSession) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/items`, {
+                    headers: { 
+                        'Authorization': `Bearer ${currentSession.access_token}` 
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Failed to load items');
+                
+                const items = await response.json();
+                items.sort((a, b) => a.is_bought - b.is_bought);
+                
+                const listEl = document.getElementById('items-list');
+                if (items.length === 0) {
+                    listEl.innerHTML = '<div class="empty-state">No items yet. Add your first item!</div>';
+                } else {
+                    listEl.innerHTML = items.map(item => `
+                        <div class="item ${item.is_bought ? 'bought' : ''}" onclick="toggleItem('${item.item_id}')">
+                            <div class="checkbox"></div>
+                            <div class="item-name">${escapeHtml(item.name)}</div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Failed to load items:', error);
+            }
+        }
+
+        async function addItem() {
+            if (!currentSession) return;
+            
+            const input = document.getElementById('new-item');
+            const name = input.value.trim();
+            
+            if (!name) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/items`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${currentSession.access_token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name })
+                });
+                
+                if (!response.ok) throw new Error('Failed to add item');
+                
+                input.value = '';
+                loadItems();
+            } catch (error) {
+                console.error('Failed to add item:', error);
+            }
+        }
+
+        async function toggleItem(itemId) {
+            if (!currentSession) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/items/${itemId}/toggle`, {
+                    method: 'PATCH',
+                    headers: { 
+                        'Authorization': `Bearer ${currentSession.access_token}` 
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Failed to toggle item');
+                
+                loadItems();
+            } catch (error) {
+                console.error('Failed to toggle item:', error);
+            }
+        }
+
+        function handleEnter(event) {
+            if (event.key === 'Enter') addItem();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Allow Enter key in password fields
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginPassword = document.getElementById('login-password');
+            const signupConfirm = document.getElementById('signup-password-confirm');
+            
+            if (loginPassword) {
+                loginPassword.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') handleLogin();
+                });
+            }
+            
+            if (signupConfirm) {
+                signupConfirm.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') handleSignup();
+                });
+            }
+        });
+
+        // Start the app
+        init();
+    </script>
+</body>
+</html>
