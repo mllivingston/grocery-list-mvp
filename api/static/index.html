@@ -112,6 +112,22 @@
             font-size: 14px;
         }
         .item-name { flex: 1; font-size: 16px; }
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #dc3545;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 10px;
+            min-width: 44px;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 8px;
+            flex-shrink: 0;
+        }
+        .delete-btn:active { opacity: 0.6; }
         .empty-state { text-align: center; color: #999; padding: 40px 0; }
         .logout-btn {
             margin-top: 20px;
@@ -374,6 +390,7 @@
                         <div class="item ${item.is_bought ? 'bought' : ''}" onclick="toggleItem('${item.item_id}')">
                             <div class="checkbox"></div>
                             <div class="item-name">${escapeHtml(item.name)}</div>
+                            <button class="delete-btn" onclick="event.stopPropagation(); deleteItem('${item.item_id}', '${escapeHtml(item.name).replace(/'/g, "\\'")}')">🗑️</button>
                         </div>
                     `).join('');
                 }
@@ -411,20 +428,45 @@
 
         async function toggleItem(itemId) {
             if (!currentSession) return;
-            
+
             try {
                 const response = await fetch(`${API_URL}/api/items/${itemId}/toggle`, {
                     method: 'PATCH',
-                    headers: { 
-                        'Authorization': `Bearer ${currentSession.access_token}` 
+                    headers: {
+                        'Authorization': `Bearer ${currentSession.access_token}`
                     }
                 });
-                
+
                 if (!response.ok) throw new Error('Failed to toggle item');
-                
+
                 loadItems();
             } catch (error) {
                 console.error('Failed to toggle item:', error);
+            }
+        }
+
+        async function deleteItem(itemId, itemName) {
+            if (!currentSession) return;
+
+            // Show confirmation dialog
+            if (!confirm(`Delete ${itemName}?`)) {
+                return; // User cancelled
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/items/${itemId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${currentSession.access_token}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to delete item');
+
+                loadItems();
+            } catch (error) {
+                console.error('Failed to delete item:', error);
+                alert('Failed to delete item. Please try again.');
             }
         }
 
