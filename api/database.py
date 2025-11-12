@@ -5,13 +5,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+# Support both SUPABASE_ANON_KEY (preferred) and SUPABASE_KEY (legacy) for backward compatibility
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY") or os.getenv("SUPABASE_KEY")
 
-if not SUPABASE_URL or not SUPABASE_KEY:
-    raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in environment variables")
+if not SUPABASE_URL or not SUPABASE_ANON_KEY:
+    raise ValueError("SUPABASE_URL and SUPABASE_ANON_KEY (or SUPABASE_KEY) must be set in environment variables")
 
 # Global anon client (current approach - will be replaced)
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 
 def get_supabase() -> Client:
@@ -38,7 +39,7 @@ def get_authenticated_supabase(access_token: str) -> Client:
     print(f"[AUTH CLIENT] Token length: {len(access_token)}")
     
     # Create new client with user's token
-    client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
     
     # Set the session with user's token - this sets auth.uid() context
     client.auth.set_session(access_token, access_token)  # Both access and refresh
