@@ -179,21 +179,44 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         const API_URL = '';  // Empty string = same domain
-        const SUPABASE_URL = 'https://anycptncmkqaoftxtzcf.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFueWNwdG5jbWtxYW9mdHh0emNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxOTk1MDksImV4cCI6MjA3Nzc3NTUwOX0.DkOXBGnE7rb9KyhX_A7-v86IRT1P-bFxOAiEIc3No2U';
-        
-        const { createClient } = supabase;
-        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-            auth: {
-                autoRefreshToken: true,
-                persistSession: true,
-            }
-        });
+        let supabaseClient = null;
         let currentSession = null;
 
         // ============================================
-        // INITIALIZATION
+        // CONFIGURATION & INITIALIZATION
         // ============================================
+        async function loadConfig() {
+            console.log('=== LOADING CONFIG ===');
+            try {
+                const response = await fetch(`${API_URL}/api/config`);
+                if (!response.ok) throw new Error('Failed to load config');
+                const config = await response.json();
+                console.log('Config loaded successfully');
+                return config;
+            } catch (error) {
+                console.error('Failed to load config:', error);
+                alert('Failed to load application configuration. Please refresh the page.');
+                throw error;
+            }
+        }
+
+        async function initializeApp() {
+            // Load config from backend
+            const config = await loadConfig();
+
+            // Initialize Supabase client with config from backend
+            const { createClient } = supabase;
+            supabaseClient = createClient(config.supabase_url, config.supabase_anon_key, {
+                auth: {
+                    autoRefreshToken: true,
+                    persistSession: true,
+                }
+            });
+
+            // Start the app
+            await init();
+        }
+
         async function init() {
             console.log('=== INIT STARTED ===');
             
@@ -514,7 +537,7 @@
         });
 
         // Start the app
-        init();
+        initializeApp();
     </script>
 </body>
 </html>

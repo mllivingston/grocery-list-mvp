@@ -7,7 +7,7 @@ from uuid import UUID
 from typing import List, Dict
 import os
 
-from database import get_supabase
+from database import get_supabase, SUPABASE_URL, SUPABASE_ANON_KEY
 from dependencies import get_current_user
 from models import ItemCreateRequest, ItemResponse, ErrorResponse
 
@@ -23,10 +23,25 @@ async def serve_frontend():
     """Serve the frontend HTML"""
     return FileResponse("static/index.html")
 
-# CORS middleware for frontend running on different port
+# CORS middleware
+# In production (Railway), restrict to the specific domain
+# In development, allow all origins
+railway_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN")
+if railway_domain:
+    # Production: restrict to Railway domain
+    allowed_origins = [
+        f"https://{railway_domain}",
+        f"http://{railway_domain}",  # In case HTTP is used
+    ]
+    print(f"[CORS] Production mode - Allowing origins: {allowed_origins}")
+else:
+    # Development: allow all origins
+    allowed_origins = ["*"]
+    print("[CORS] Development mode - Allowing all origins")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Simplified - or specify your Railway domain
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -67,8 +82,20 @@ async def health_check(
     
     print(f"[HEALTH CHECK] Complete: {health_status}")
     print(f"{'='*60}\n")
-    
+
     return health_status
+
+
+@app.get("/api/config")
+async def get_config() -> Dict:
+    """
+    Get frontend configuration (Supabase URL and anon key).
+    No authentication required - these are public values.
+    """
+    return {
+        "supabase_url": SUPABASE_URL,
+        "supabase_anon_key": SUPABASE_ANON_KEY
+    }
 
 
 @app.get("/api/items", response_model=List[ItemResponse])
