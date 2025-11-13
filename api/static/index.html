@@ -79,8 +79,8 @@
         #items-list { background: white; border-radius: 8px; padding: 20px; }
         .item {
             display: flex;
-            align-items: center;
-            padding: 12px;
+            align-items: flex-start;
+            padding: 14px 12px;
             border-bottom: 1px solid #eee;
             cursor: pointer;
             transition: background 0.2s;
@@ -95,6 +95,7 @@
             border: 2px solid #ddd;
             border-radius: 50%;
             margin-right: 12px;
+            margin-top: 2px;
             flex-shrink: 0;
         }
         .item.bought .checkbox {
@@ -114,10 +115,9 @@
         .item-name {
             flex: 1;
             font-size: 16px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            min-width: 0; /* Allow flex item to shrink below content size */
+            line-height: 1.5;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
         .delete-btn {
             background: none;
@@ -132,6 +132,7 @@
             align-items: center;
             justify-content: center;
             margin-left: 8px;
+            margin-top: -8px;
             flex-shrink: 0;
         }
         .delete-btn:active { opacity: 0.6; }
