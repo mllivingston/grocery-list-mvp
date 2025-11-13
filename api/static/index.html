@@ -111,7 +111,14 @@
             transform: translate(-50%, -50%);
             font-size: 14px;
         }
-        .item-name { flex: 1; font-size: 16px; }
+        .item-name {
+            flex: 1;
+            font-size: 16px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0; /* Allow flex item to shrink below content size */
+        }
         .delete-btn {
             background: none;
             border: none;
