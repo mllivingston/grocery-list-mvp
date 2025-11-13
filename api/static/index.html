@@ -79,13 +79,15 @@
         #items-list { background: white; border-radius: 8px; padding: 20px; }
         .item {
             display: flex;
-            align-items: flex-start;
+            align-items: center;
+            gap: 12px;
             padding: 14px 12px;
             border-bottom: 1px solid #eee;
             cursor: pointer;
             transition: background 0.2s;
         }
         .item:hover { background: #f9f9f9; }
+        .item:active { background: #f0f0f0; }
         .item:last-child { border-bottom: none; }
         .item.bought { opacity: 0.5; }
         .item.bought .item-name { text-decoration: line-through; }
@@ -94,8 +96,6 @@
             height: 24px;
             border: 2px solid #ddd;
             border-radius: 50%;
-            margin-right: 12px;
-            margin-top: 2px;
             flex-shrink: 0;
         }
         .item.bought .checkbox {
@@ -115,10 +115,12 @@
         .item-name {
             flex: 1;
             font-size: 16px;
-            line-height: 1.5;
+            line-height: 1.4;
+            color: #333;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            min-width: 0;
         }
         .delete-btn {
             background: none;
@@ -126,17 +128,23 @@
             color: #dc3545;
             font-size: 20px;
             cursor: pointer;
-            padding: 10px;
-            min-width: 44px;
-            min-height: 44px;
+            padding: 8px;
+            width: 40px;
+            height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-left: 8px;
-            margin-top: -8px;
             flex-shrink: 0;
+            border-radius: 4px;
+            transition: background 0.2s;
         }
-        .delete-btn:active { opacity: 0.6; }
+        .delete-btn:hover {
+            background: #f8f9fa;
+        }
+        .delete-btn:active {
+            background: #e9ecef;
+            transform: scale(0.95);
+        }
         .empty-state { text-align: center; color: #999; padding: 40px 0; }
         .logout-btn {
             margin-top: 20px;
