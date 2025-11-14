@@ -73,6 +73,51 @@
         
         /* App screen */
         #app-screen { display: none; }
+
+        /* Tab navigation */
+        .tabs {
+            display: flex;
+            gap: 0;
+            margin: 20px 0 0 0;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .tab {
+            flex: 1;
+            padding: 14px 20px;
+            background: transparent;
+            color: #666;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: -2px;
+        }
+        .tab:hover {
+            background: #f5f5f5;
+            color: #333;
+        }
+        .tab.active {
+            color: #007AFF;
+            border-bottom-color: #007AFF;
+            background: transparent;
+        }
+        .tab-count {
+            display: inline-block;
+            min-width: 20px;
+            padding: 2px 8px;
+            margin-left: 6px;
+            background: #e0e0e0;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .tab.active .tab-count {
+            background: #007AFF;
+            color: white;
+        }
+
         .add-item { display: flex; gap: 10px; margin: 20px 0; }
         .add-item input { flex: 1; margin: 0; }
         .add-item button { width: auto; padding: 12px 24px; }
@@ -121,6 +166,29 @@
             overflow: hidden;
             text-overflow: ellipsis;
             min-width: 0;
+        }
+        .move-btn {
+            background: none;
+            border: none;
+            color: #007AFF;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .move-btn:hover {
+            background: #f8f9fa;
+        }
+        .move-btn:active {
+            background: #e9ecef;
+            transform: scale(0.95);
         }
         .delete-btn {
             background: none;
@@ -185,8 +253,19 @@
     <!-- App Screen -->
     <div id="app-screen">
         <h1>🛒 My Grocery List</h1>
+
+        <!-- Tab Navigation -->
+        <div class="tabs">
+            <button class="tab active" data-tab="to_buy" onclick="switchTab('to_buy')">
+                To Buy <span class="tab-count" id="to-buy-count">0</span>
+            </button>
+            <button class="tab" data-tab="items" onclick="switchTab('items')">
+                Items <span class="tab-count" id="items-count">0</span>
+            </button>
+        </div>
+
         <div class="add-item">
-            <input type="text" id="new-item" placeholder="Add item...">
+            <input type="text" id="new-item" placeholder="Add item to shopping list...">
             <button onclick="addItem()">Add</button>
         </div>
         <div id="items-list"></div>
@@ -198,6 +277,7 @@
         const API_URL = '';  // Empty string = same domain
         let supabaseClient = null;
         let currentSession = null;
+        let currentTab = 'to_buy';  // Default tab
 
         // ============================================
         // CONFIGURATION & INITIALIZATION
@@ -236,36 +316,36 @@
 
         async function init() {
             console.log('=== INIT STARTED ===');
-            
+
             // Check for existing session
             const { data: { session } } = await supabaseClient.auth.getSession();
-            
+
             if (session) {
                 console.log('Found existing session for:', session.user.email);
                 currentSession = session;
                 showApp();
-                loadItems();
+                loadItems(currentTab);  // Load default tab (to_buy)
             } else {
                 console.log('No existing session');
                 showLogin();
             }
-            
+
             // Listen for auth changes
             supabaseClient.auth.onAuthStateChange((event, session) => {
                 console.log('Auth state changed:', event);
-                
+
                 if (event === 'SIGNED_IN' && session) {
                     console.log('User signed in:', session.user.email);
                     currentSession = session;
                     showApp();
-                    loadItems();
+                    loadItems(currentTab);  // Load default tab (to_buy)
                 } else if (event === 'SIGNED_OUT') {
                     console.log('User signed out');
                     currentSession = null;
                     showLogin();
                 }
             });
-            
+
             console.log('=== INIT COMPLETE ===');
         }
 
@@ -288,6 +368,29 @@
         function showApp() {
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('app-screen').style.display = 'block';
+        }
+
+        // ============================================
+        // TAB SWITCHING
+        // ============================================
+        function switchTab(tabName) {
+            console.log(`[TAB] Switching to: ${tabName}`);
+            currentTab = tabName;
+
+            // Update active tab styling
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.tab === tabName);
+            });
+
+            // Update input placeholder based on active tab
+            const placeholders = {
+                'to_buy': 'Add item to shopping list...',
+                'items': 'Add item to inventory...'
+            };
+            document.getElementById('new-item').placeholder = placeholders[tabName];
+
+            // Load items for this tab
+            loadItems(tabName);
         }
 
         function clearMessages() {
@@ -405,64 +508,111 @@
         }
 
         // ============================================
-        // GROCERY ITEM FUNCTIONS (unchanged)
+        // GROCERY ITEM FUNCTIONS
         // ============================================
-        async function loadItems() {
+        async function loadItems(listType) {
             if (!currentSession) return;
-            
+
+            // Default to current tab if not specified
+            if (!listType) listType = currentTab;
+
             try {
-                const response = await fetch(`${API_URL}/api/items`, {
-                    headers: { 
-                        'Authorization': `Bearer ${currentSession.access_token}` 
+                console.log(`[LOAD ITEMS] Fetching items for list: ${listType}`);
+                const response = await fetch(`${API_URL}/api/items?list_type=${listType}`, {
+                    headers: {
+                        'Authorization': `Bearer ${currentSession.access_token}`
                     }
                 });
-                
+
                 if (!response.ok) throw new Error('Failed to load items');
-                
+
                 const items = await response.json();
-                items.sort((a, b) => a.is_bought - b.is_bought);
-                
+                console.log(`[LOAD ITEMS] Loaded ${items.length} items from ${listType}`);
+
+                // Update tab count
+                const countId = listType === 'to_buy' ? 'to-buy-count' : 'items-count';
+                document.getElementById(countId).textContent = items.length;
+
+                // Render items based on which tab we're on
                 const listEl = document.getElementById('items-list');
                 if (items.length === 0) {
-                    listEl.innerHTML = '<div class="empty-state">No items yet. Add your first item!</div>';
+                    const emptyMessages = {
+                        'to_buy': 'No items in shopping list. Add items you need to buy!',
+                        'items': 'No items in inventory. Scan a receipt or add items manually!'
+                    };
+                    listEl.innerHTML = `<div class="empty-state">${emptyMessages[listType]}</div>`;
                 } else {
-                    listEl.innerHTML = items.map(item => `
-                        <div class="item ${item.is_bought ? 'bought' : ''}" onclick="toggleItem('${item.item_id}')">
-                            <div class="checkbox"></div>
-                            <div class="item-name">${escapeHtml(item.name)}</div>
-                            <button class="delete-btn" onclick="event.stopPropagation(); deleteItem('${item.item_id}', '${escapeHtml(item.name).replace(/'/g, "\\'")}')">🗑️</button>
-                        </div>
-                    `).join('');
+                    listEl.innerHTML = items.map(item => renderItem(item, listType)).join('');
                 }
             } catch (error) {
                 console.error('Failed to load items:', error);
             }
         }
 
+        function renderItem(item, listType) {
+            const targetList = listType === 'to_buy' ? 'items' : 'to_buy';
+            const moveIcon = listType === 'to_buy' ? '➡️' : '⬅️';
+            const escapedName = escapeHtml(item.name).replace(/'/g, "\\'");
+
+            if (listType === 'to_buy') {
+                // To Buy tab: show checkbox for toggle
+                return `
+                    <div class="item ${item.is_bought ? 'bought' : ''}" onclick="toggleItem('${item.item_id}')">
+                        <div class="checkbox"></div>
+                        <div class="item-name">${escapeHtml(item.name)}</div>
+                        <button class="move-btn" onclick="event.stopPropagation(); moveItem('${item.item_id}', '${targetList}', '${escapedName}')">${moveIcon}</button>
+                        <button class="delete-btn" onclick="event.stopPropagation(); deleteItem('${item.item_id}', '${escapedName}')">🗑️</button>
+                    </div>
+                `;
+            } else {
+                // Items tab: no checkbox
+                return `
+                    <div class="item">
+                        <div class="item-name">${escapeHtml(item.name)}</div>
+                        <button class="move-btn" onclick="event.stopPropagation(); moveItem('${item.item_id}', '${targetList}', '${escapedName}')">${moveIcon}</button>
+                        <button class="delete-btn" onclick="event.stopPropagation(); deleteItem('${item.item_id}', '${escapedName}')">🗑️</button>
+                    </div>
+                `;
+            }
+        }
+
         async function addItem() {
             if (!currentSession) return;
-            
+
             const input = document.getElementById('new-item');
             const name = input.value.trim();
-            
+
             if (!name) return;
-            
+
             try {
+                console.log(`[ADD ITEM] Adding "${name}" to ${currentTab}`);
                 const response = await fetch(`${API_URL}/api/items`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${currentSession.access_token}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ name })
+                    body: JSON.stringify({
+                        name: name,
+                        list_type: currentTab
+                    })
                 });
-                
+
+                if (response.status === 409) {
+                    // Duplicate item error
+                    const error = await response.json();
+                    alert(error.detail);
+                    return;
+                }
+
                 if (!response.ok) throw new Error('Failed to add item');
-                
+
+                console.log('[ADD ITEM] ✅ Item added successfully');
                 input.value = '';
-                loadItems();
+                loadItems(currentTab);
             } catch (error) {
                 console.error('Failed to add item:', error);
+                alert('Failed to add item. Please try again.');
             }
         }
 
@@ -479,9 +629,41 @@
 
                 if (!response.ok) throw new Error('Failed to toggle item');
 
-                loadItems();
+                loadItems(currentTab);
             } catch (error) {
                 console.error('Failed to toggle item:', error);
+            }
+        }
+
+        async function moveItem(itemId, toList, itemName) {
+            if (!currentSession) return;
+
+            try {
+                console.log(`[MOVE ITEM] Moving item ${itemId} to ${toList}`);
+                const response = await fetch(`${API_URL}/api/items/${itemId}/move`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${currentSession.access_token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ to_list: toList })
+                });
+
+                if (response.status === 409) {
+                    // Duplicate item error
+                    const error = await response.json();
+                    alert(error.detail);
+                    return;
+                }
+
+                if (!response.ok) throw new Error('Failed to move item');
+
+                console.log('[MOVE ITEM] ✅ Item moved successfully');
+                // Reload current tab to remove the item
+                loadItems(currentTab);
+            } catch (error) {
+                console.error('Failed to move item:', error);
+                alert('Failed to move item. Please try again.');
             }
         }
 
@@ -494,6 +676,7 @@
             }
 
             try {
+                console.log(`[DELETE ITEM] Deleting item ${itemId}`);
                 const response = await fetch(`${API_URL}/api/items/${itemId}`, {
                     method: 'DELETE',
                     headers: {
@@ -503,7 +686,8 @@
 
                 if (!response.ok) throw new Error('Failed to delete item');
 
-                loadItems();
+                console.log('[DELETE ITEM] ✅ Item deleted successfully');
+                loadItems(currentTab);
             } catch (error) {
                 console.error('Failed to delete item:', error);
                 alert('Failed to delete item. Please try again.');
