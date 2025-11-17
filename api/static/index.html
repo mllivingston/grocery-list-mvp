@@ -659,8 +659,18 @@
                 if (!response.ok) throw new Error('Failed to move item');
 
                 console.log('[MOVE ITEM] ✅ Item moved successfully');
-                // Reload current tab to remove the item
-                loadItems(currentTab);
+
+                // Reload BOTH tabs to ensure UI consistency
+                // This updates:
+                // 1. Source tab - removes the moved item
+                // 2. Target tab - adds the moved item
+                // 3. Both tab count badges
+                // Uses Promise.all() to fetch both in parallel (not sequential)
+                await Promise.all([
+                    loadItems('to_buy'),
+                    loadItems('items')
+                ]);
+
             } catch (error) {
                 console.error('Failed to move item:', error);
                 alert('Failed to move item. Please try again.');
