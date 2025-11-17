@@ -22,7 +22,7 @@ Migrations need to be run manually in the Supabase SQL Editor.
 ## Migration History
 
 - `init.sql` - Initial database schema with grocery_items table
-- `add_list_type.sql` - Add two-tab architecture (To Buy / Items lists)
+- `add_list_type.sql` - Add two-tab architecture (To Buy / History lists)
 
 ## Important Notes
 
@@ -30,6 +30,6 @@ Migrations need to be run manually in the Supabase SQL Editor.
 - Migrations are designed to preserve existing data
 - The `add_list_type.sql` migration will:
   - Add `list_type` column with default 'to_buy'
-  - Migrate bought items to 'items' list
+  - Migrate bought items to 'history' list
   - Migrate unbought items to 'to_buy' list
   - Keep the `is_bought` field for backward compatibility

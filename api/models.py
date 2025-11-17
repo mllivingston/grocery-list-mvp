@@ -6,11 +6,11 @@ from typing import Optional, Literal
 
 class ItemCreateRequest(BaseModel):
     name: str
-    list_type: Literal["to_buy", "items"]
+    list_type: Literal["to_buy", "history"]
 
 
 class ItemMoveRequest(BaseModel):
-    to_list: Literal["to_buy", "items"]
+    to_list: Literal["to_buy", "history"]
 
 
 class ItemResponse(BaseModel):
