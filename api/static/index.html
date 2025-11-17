@@ -259,8 +259,8 @@
             <button class="tab active" data-tab="to_buy" onclick="switchTab('to_buy')">
                 To Buy <span class="tab-count" id="to-buy-count">...</span>
             </button>
-            <button class="tab" data-tab="history" onclick="switchTab('history')">
-                History <span class="tab-count" id="history-count">...</span>
+            <button class="tab" data-tab="items" onclick="switchTab('items')">
+                Items <span class="tab-count" id="items-count">...</span>
             </button>
         </div>
 
@@ -327,7 +327,7 @@
                 // Load both tabs to populate counts immediately
                 await Promise.all([
                     loadItems('to_buy'),
-                    loadItems('history')
+                    loadItems('items')
                 ]);
             } else {
                 console.log('No existing session');
@@ -345,7 +345,7 @@
                     // Load both tabs to populate counts immediately
                     Promise.all([
                         loadItems('to_buy'),
-                        loadItems('history')
+                        loadItems('items')
                     ]).catch(error => {
                         console.error('Failed to load initial items:', error);
                     });
@@ -395,7 +395,7 @@
             // Update input placeholder based on active tab
             const placeholders = {
                 'to_buy': 'Add item to shopping list...',
-                'history': 'Add item to history...'
+                'items': 'Add item to inventory...'
             };
             document.getElementById('new-item').placeholder = placeholders[tabName];
 
@@ -526,7 +526,7 @@
             // Default to current tab if not specified
             if (!listType) listType = currentTab;
 
-            const countId = listType === 'to_buy' ? 'to-buy-count' : 'history-count';
+            const countId = listType === 'to_buy' ? 'to-buy-count' : 'items-count';
 
             try {
                 console.log(`[LOAD ITEMS] Fetching items for list: ${listType}`);
@@ -561,7 +561,7 @@
                     if (items.length === 0) {
                         const emptyMessages = {
                             'to_buy': 'No items in shopping list. Add items you need to buy!',
-                            'history': 'No purchase history yet. Items you buy will appear here!'
+                            'items': 'No items in inventory. Scan a receipt or add items manually!'
                         };
                         listEl.innerHTML = `<div class="empty-state">${emptyMessages[listType]}</div>`;
                     } else {
@@ -582,7 +582,7 @@
         }
 
         function renderItem(item, listType) {
-            const targetList = listType === 'to_buy' ? 'history' : 'to_buy';
+            const targetList = listType === 'to_buy' ? 'items' : 'to_buy';
             const moveIcon = listType === 'to_buy' ? '➡️' : '⬅️';
             const escapedName = escapeHtml(item.name).replace(/'/g, "\\'");
 
@@ -597,7 +597,7 @@
                     </div>
                 `;
             } else {
-                // History tab: no checkbox
+                // Items tab: no checkbox
                 return `
                     <div class="item">
                         <div class="item-name">${escapeHtml(item.name)}</div>
@@ -700,7 +700,7 @@
                 // Uses Promise.all() to fetch both in parallel (not sequential)
                 await Promise.all([
                     loadItems('to_buy'),
-                    loadItems('history')
+                    loadItems('items')
                 ]);
 
             } catch (error) {

@@ -108,16 +108,16 @@ async def get_items(
     Get grocery items for the authenticated user filtered by list type.
 
     - list_type='to_buy': Returns shopping list (sorted by is_bought ASC, created_at DESC)
-    - list_type='history': Returns purchase history (sorted alphabetically by name)
+    - list_type='items': Returns pantry inventory (sorted alphabetically by name)
     """
     try:
         print(f"\n[GET ITEMS] Starting for user_id: {user_id}, list_type: {list_type}")
 
         # Validate list_type
-        if list_type not in ["to_buy", "history"]:
+        if list_type not in ["to_buy", "items"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="list_type must be 'to_buy' or 'history'"
+                detail="list_type must be 'to_buy' or 'items'"
             )
 
         # Build query with list_type filter
@@ -133,7 +133,7 @@ async def get_items(
                            .order("created_at", desc=True) \
                            .execute()
         else:
-            # History: alphabetical order
+            # Items: alphabetical order
             response = query.order("name", desc=False) \
                            .execute()
 
@@ -331,7 +331,7 @@ async def move_item(
         if duplicate_check.data:
             print(f"[MOVE ITEM] ❌ Duplicate found in target list")
             list_names = {
-                'history': 'history',
+                'items': 'inventory',
                 'to_buy': 'shopping list'
             }
             raise HTTPException(
