@@ -324,7 +324,11 @@
                 console.log('Found existing session for:', session.user.email);
                 currentSession = session;
                 showApp();
-                loadItems(currentTab);  // Load default tab (to_buy)
+                // Load both tabs to populate counts immediately
+                await Promise.all([
+                    loadItems('to_buy'),
+                    loadItems('items')
+                ]);
             } else {
                 console.log('No existing session');
                 showLogin();
@@ -338,7 +342,13 @@
                     console.log('User signed in:', session.user.email);
                     currentSession = session;
                     showApp();
-                    loadItems(currentTab);  // Load default tab (to_buy)
+                    // Load both tabs to populate counts immediately
+                    Promise.all([
+                        loadItems('to_buy'),
+                        loadItems('items')
+                    ]).catch(error => {
+                        console.error('Failed to load initial items:', error);
+                    });
                 } else if (event === 'SIGNED_OUT') {
                     console.log('User signed out');
                     currentSession = null;
@@ -529,20 +539,23 @@
                 const items = await response.json();
                 console.log(`[LOAD ITEMS] Loaded ${items.length} items from ${listType}`);
 
-                // Update tab count
+                // ALWAYS update tab count (even if tab is not visible)
                 const countId = listType === 'to_buy' ? 'to-buy-count' : 'items-count';
                 document.getElementById(countId).textContent = items.length;
 
-                // Render items based on which tab we're on
-                const listEl = document.getElementById('items-list');
-                if (items.length === 0) {
-                    const emptyMessages = {
-                        'to_buy': 'No items in shopping list. Add items you need to buy!',
-                        'items': 'No items in inventory. Scan a receipt or add items manually!'
-                    };
-                    listEl.innerHTML = `<div class="empty-state">${emptyMessages[listType]}</div>`;
-                } else {
-                    listEl.innerHTML = items.map(item => renderItem(item, listType)).join('');
+                // Only render items if this is the currently visible tab
+                // This prevents race conditions when loading both tabs in parallel
+                if (listType === currentTab) {
+                    const listEl = document.getElementById('items-list');
+                    if (items.length === 0) {
+                        const emptyMessages = {
+                            'to_buy': 'No items in shopping list. Add items you need to buy!',
+                            'items': 'No items in inventory. Scan a receipt or add items manually!'
+                        };
+                        listEl.innerHTML = `<div class="empty-state">${emptyMessages[listType]}</div>`;
+                    } else {
+                        listEl.innerHTML = items.map(item => renderItem(item, listType)).join('');
+                    }
                 }
             } catch (error) {
                 console.error('Failed to load items:', error);
