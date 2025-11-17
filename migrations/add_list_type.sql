@@ -1,14 +1,14 @@
 -- Add list_type column to grocery_items table
--- Migration for two-tab architecture (To Buy / History)
+-- Migration for two-tab architecture (To Buy / Items)
 
 -- Add list_type column with default 'to_buy'
 ALTER TABLE grocery_items
 ADD COLUMN list_type TEXT NOT NULL DEFAULT 'to_buy';
 
 -- Migrate existing data based on is_bought status
--- Items that are bought → go to 'history' tab (purchase history)
+-- Items that are bought → go to 'items' tab (pantry inventory)
 UPDATE grocery_items
-SET list_type = 'history'
+SET list_type = 'items'
 WHERE is_bought = true;
 
 -- Items that are not bought → stay in 'to_buy' tab (shopping list)

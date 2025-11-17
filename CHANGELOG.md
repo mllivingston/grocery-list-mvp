@@ -3,13 +3,13 @@
 ## [Unreleased] - Two-Tab Architecture
 
 ### Added
-- **Two-Tab Architecture**: Split single list into "To Buy" (shopping list) and "History" (purchase history)
+- **Two-Tab Architecture**: Split single list into "To Buy" (shopping list) and "Items" (pantry inventory)
 - **Tab Navigation**: Visual tab switcher with item counts
 - **Move Items Between Lists**: Arrow button to transfer items between tabs
 - **Case-Insensitive Duplicate Detection**: Prevents adding "Milk", "milk", and "MILK" as separate items
 - **List-Specific Sorting**:
   - To Buy: Unbought items first (newest first), then bought items (newest first)
-  - History: Alphabetical order
+  - Items: Alphabetical order
 - **New API Endpoint**: `PATCH /api/items/{id}/move` for moving items between lists
 - **Updated API Endpoints**:
   - `GET /api/items` now requires `list_type` query parameter
@@ -28,13 +28,13 @@ Run `migrations/add_list_type.sql` in Supabase SQL Editor to update database sch
 
 ### Flow A: Receipt Scanning (Future)
 1. Scan receipt → items extracted
-2. Items automatically added to "History" tab
+2. Items automatically added to "Items" tab
 3. Duplicates silently skipped
 
 ### Flow B: Planning Shopping
-1. View "History" tab
+1. View "Items" tab
 2. Click arrow button on "milk" → moves to "To Buy" tab
-3. Item stays in "History" tab, copy created in "To Buy"
+3. Item stays in "Items" tab, copy created in "To Buy"
 
 ### Flow C: During Shopping
 1. Open "To Buy" tab
@@ -42,13 +42,13 @@ Run `migrations/add_list_type.sql` in Supabase SQL Editor to update database sch
 3. Continue shopping
 
 ### Flow D: After Shopping
-1. Click arrow button on purchased items → moves back to "History"
+1. Click arrow button on purchased items → moves back to "Items"
 2. Items removed from "To Buy" tab
-3. Items appear in "History" tab (alphabetically sorted)
+3. Items appear in "Items" tab (alphabetically sorted)
 
 ### Flow E: Manual Add
 1. In "To Buy" tab: type "bread" → added to shopping list
-2. In "History" tab: type "flour" → added to history
+2. In "Items" tab: type "flour" → added to inventory
 3. Duplicate alerts shown if item already exists
 
 ## Technical Details
@@ -68,5 +68,5 @@ Run `migrations/add_list_type.sql` in Supabase SQL Editor to update database sch
 
 ### API Breaking Changes
 ⚠️ **Important**: Clients must update to use the new API:
-- `GET /api/items` now requires `?list_type=to_buy` or `?list_type=history`
+- `GET /api/items` now requires `?list_type=to_buy` or `?list_type=items`
 - `POST /api/items` now requires `{"name": "...", "list_type": "..."}` in body
